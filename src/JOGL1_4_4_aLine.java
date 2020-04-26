@@ -19,23 +19,39 @@ import static com.jogamp.opengl.GL.GL_STATIC_DRAW;
 
 
 public class JOGL1_4_4_aLine extends JOGL1_4_3_Triangle {
+	float vColor[] = {1.0f, 0.0f, 0.0f}; 
 
 	
 	public void display(GLAutoDrawable drawable) {		
 
 		// samples more points 
-		int x0 = (int) (Math.random() * 2*WIDTH);
-		int y0 = (int) (Math.random() * 2*HEIGHT);
-		int xn = (int) (Math.random() * 2*WIDTH);
-		int yn = (int) (Math.random() * 2*HEIGHT);
+		int x0 = (int) (Math.random() * WIDTH*2);
+		int y0 = (int) (Math.random() * HEIGHT*2);
+		int xn = (int) (Math.random() * WIDTH*2);
+		int yn = (int) (Math.random() * HEIGHT*2);
 
 		// generate a random color		
-		color[0] = (float) Math.random();
-		color[1] = (float) Math.random();
-		color[2] = (float) Math.random();
+		vColor[0] = (float) Math.random();
+		vColor[1] = (float) Math.random();
+		vColor[2] = (float) Math.random();
 		
+		// send color data to vertex shader through uniform
+ 		FloatBuffer cBuf = Buffers.newDirectFloatBuffer(vColor);
 
-		uploadColor(color); 		
+		//Connect JOGL variable with shader variable by name
+		int colorLoc = gl.glGetUniformLocation(vfPrograms,  "vColor"); 
+		gl.glProgramUniform3fv(vfPrograms,  colorLoc, 1, cBuf);
+
+		
+		bresenhamLine(x0, y0, xn, yn); // draw a line without antialiasing 
+		drawable.swapBuffers(); //make it appear
+
+		// sleep to slow down the rendering
+		try {
+			Thread.sleep(600);
+		} catch (Exception ignore) {
+		}
+		
 		//draw an antialiased line. Intensity is calculated in the vertex shader
 		antialiasedLine(x0, y0, xn, yn);		
 	}
@@ -181,6 +197,113 @@ public class JOGL1_4_4_aLine extends JOGL1_4_3_Triangle {
   }
 
 
+	
+	// Bresenham's midpoint line algorithm: here we rewrite for random pixel colors
+	public void bresenhamLine(int x0, int y0, int xn, int yn) {
+	    int dx, dy, incrE, incrNE, d, x, y, flag = 0;	    
+	    
+	    if (xn<x0) {
+	      //swapd(&x0,&xn);
+	      int temp = x0;
+	      x0 = xn;
+	      xn = temp;
+
+	      //swapd(&y0,&yn);
+	      temp = y0;
+	      y0 = yn;
+	      yn = temp;
+	    }
+	    if (yn<y0) {
+	      y0 = -y0;
+	      yn = -yn;
+	      flag = 10;
+	    }
+
+	    dy = yn-y0;
+	    dx = xn-x0;
+
+	    if (dx<dy) {
+	      //swapd(&x0,&y0);
+	      int temp = x0;
+	      x0 = y0;
+	      y0 = temp;
+
+	      //swapd(&xn,&yn);
+	      temp = xn;
+	      xn = yn;
+	      yn = temp;
+
+	      //swapd(&dy,&dx);
+	      temp = dy;
+	      dy = dx;
+	      dx = temp;
+
+	      flag++;
+	    }
+
+	    x = x0;
+	    y = y0;
+	    d = 2*dy-dx;
+	    incrE = 2*dy;
+	    incrNE = 2*(dy-dx);
+
+	    int nPixels = xn - x0 + 1; // number of pixels on the line 	    
+	    float[] vPoints = new float[3*nPixels]; // predefined number of pixels on the line
+	    float[] brights = new float[nPixels]; // predefined number of pixel colors on the line
+	    float xf = x, yf = y; // taking care of different slopes
+	    
+	    while (x<xn+1) {
+	       // taking care of different slopes (mirror vertical, horizontal, and diagonal lines) 
+	    	xf = x; yf = y; 
+		   if (flag==1) {
+			      xf = y; yf = x;
+			    } else if (flag==10) {
+			      xf = x; yf = -y;
+			    } else if (flag==11) {
+			      xf = y;  yf = -x;
+		  }
+		   
+	      // write a pixel into the framebuffer, here we write into an array
+		  vPoints[(x-x0)*3] = xf / (float) WIDTH - 1.0f; // normalize -1 to 1
+		  vPoints[(x-x0)*3 + 1] = yf / (float) HEIGHT - 1.0f; // normalize -1 to 1
+		  vPoints[(x-x0)*3 + 2] = 0.0f;
+		  
+		  // generate corresponding pixel colors
+		  brights[(x-x0)] = 0.4f; 		  
+
+	      x++; /* consider next pixel */
+	      if (d<=0) {
+	        d += incrE;
+	      } else {
+	        y++;
+	        d += incrNE;
+	      }
+	    }
+	       
+	    
+	    // load vbo[0] with vertex data
+		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]); // use handle 0 		
+		FloatBuffer vBuf = Buffers.newDirectFloatBuffer(vPoints);
+		gl.glBufferData(GL_ARRAY_BUFFER, vBuf.limit()*Float.BYTES,  //# of float * size of floats in bytes
+					vBuf, // the vertex array
+					GL_STATIC_DRAW); 
+ 		gl.glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0); // associate vbo[0] with active VAO buffer
+						
+	    // load vbo[1] with color data
+		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[1]); // use handle 0 		
+		FloatBuffer cBuf = Buffers.newDirectFloatBuffer(brights);
+		gl.glBufferData(GL_ARRAY_BUFFER, cBuf.limit()*Float.BYTES,  //# of float * size of floats in bytes
+					cBuf, // the vertex array
+					GL_STATIC_DRAW); 
+ 		gl.glVertexAttribPointer(1, 1, GL_FLOAT, false, 0, 0); // associate vbo[0] with active VAO buffer
+
+ 		
+		//  draw points: VAO has is an array of corresponding vertices and colors
+		gl.glDrawArrays(GL_POINTS, 0, (vBuf.limit()/3)); 	    
+	  }
+
+
+	
 	public void init(GLAutoDrawable drawable) {
 				
 			gl = (GL4) drawable.getGL();

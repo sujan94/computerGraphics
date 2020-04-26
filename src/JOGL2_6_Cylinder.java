@@ -47,7 +47,7 @@ public class JOGL2_6_Cylinder extends JOGL2_5_Cone {
 
 	  }
 
-	  void subdivideCylinder(float vPoints[],float v1[],
+	  private void subdivideCylinder(float vPoints[],float v1[],
 			  float v2[], int depth) {
 		  float v0[] = {0, 0, 0};
 		  float v12[] = new float[3];
@@ -124,8 +124,12 @@ public class JOGL2_6_Cylinder extends JOGL2_5_Cone {
 	    
 	    // send the current MODELVIEW matrix and the vertices to the vertex shader
 	    // color is generated according to the logical coordinates   
-	    uploadMV(); // get the modelview matrix from the matrix stack
+	    get_Matrix(MV); // get the modelview matrix from the matrix stack
 		
+		// connect the modelview matrix
+		int mvLoc = gl.glGetUniformLocation(vfPrograms,  "mv_matrix"); 
+		gl.glProgramUniformMatrix4fv(vfPrograms, mvLoc,  1,  false,  MV, 0);  
+
 		// load vbo[0] with vertex data
 		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]); // use handle 0 		
 		FloatBuffer vBuf = Buffers.newDirectFloatBuffer(vPoints);

@@ -1,4 +1,4 @@
-#version 410
+#version	430	
 
 in  vec3 color; // (interpolated) value from vertex shader
 

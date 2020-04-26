@@ -28,7 +28,7 @@ public class JOGL1_0_Point extends JOGL1_0_Frame {
 		
 		// the vertex shader runs for all vertices in parallel 
 		// gl_Position is a predefined output variable
-		String vShaderSource[] = { 	"#version 410\n",
+		String vShaderSource[] = { 	"#version 430\n",
 									"void main(void) {", 
 										"gl_Position = vec4(0.0, 0.0, 0.0, 1.0);", 
 									"}", 
@@ -36,7 +36,7 @@ public class JOGL1_0_Point extends JOGL1_0_Frame {
 		
 		// the fragment shader is to set the RGB color of the pixel to be displayed. 
 		// it runs for all pixels in parallel 
-		String fShaderSource[] = { 	"#version 410\n",
+		String fShaderSource[] = { 	"#version 430\n",
 									"out vec4 color; ", 
 									"void main(void) {", 
 										"color	= vec4(1.0, 0.0, 0.0, 1.0); ",
@@ -59,7 +59,7 @@ public class JOGL1_0_Point extends JOGL1_0_Frame {
 		gl.glShaderSource(fShader, fShaderSource.length, fShaderSource, null, 0);
 		gl.glCompileShader(fShader);
 
-		// 3. attach the shader programs: these two shaders are related together
+		// 3. attach the shader programs
 		int vfProgram = gl.glCreateProgram(); // for attaching v & f shaders
 		gl.glAttachShader(vfProgram, vShader);
 		gl.glAttachShader(vfProgram, fShader);
@@ -68,14 +68,13 @@ public class JOGL1_0_Point extends JOGL1_0_Frame {
 		gl.glLinkProgram(vfProgram); // successful linking --ready for using
 
 		gl.glDeleteShader(vShader); // attached shader object will be flagged for deletion until 
-									// it is no longer attached. 
-		gl.glDeleteShader(fShader); // It should not be deleted if you want to use it again after using another shader.  
+									// it is no longer attached
+		gl.glDeleteShader(fShader);
 
 		// 5. Use the program
-		gl.glUseProgram(vfProgram); // loads the program onto the GPU hardware; can switch to another attached shader program.
+		gl.glUseProgram(vfProgram); // loads them onto the GPU hardware
 		gl.glDeleteProgram(vfProgram); // in-use program object will be flagged for deletion until 
-										// it is no longer in-use. If you have multiple programs that you switch back and forth,
-										// they should not be deleted. 
+										// it is no longer in-use
 
 		return vfProgram;
 	}
@@ -85,7 +84,7 @@ public class JOGL1_0_Point extends JOGL1_0_Frame {
 		System.out.println("c) Display is called, which overwrite super's display.");
 
 		// 6. specify to draw a primitive: one point
-		gl.glPointSize(100.0f);
+		gl.glPointSize(10.0f);
 		gl.glDrawArrays(GL_POINTS, 0, 1); // first index 0, count 1
 		
 		// Supposed to send a VAO with vertex positions to the vertex shader for rendering.

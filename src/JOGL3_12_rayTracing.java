@@ -13,13 +13,9 @@ import com.jogamp.opengl.GLAutoDrawable;
 
 public class JOGL3_12_rayTracing extends JOGL3_11_Phong {
 
-	static int MAX = 20; // maximum number of spheres or light sources	
+	static int MAX = 20; // maximum number of spheres or light sources
 	float[][] sphere = new float[MAX][4]; // spheres with radius and center
-	float[][] cylinder = new float[MAX/2][5]; // horizontal cylinder: (y-yc)^2 + (z-zc)^2 = r^2; x0<x<x1 
-	float[][] cone = new float[MAX/2][4]; // vertical cone: (x-xc)^2 + (z-zc)^2 = (r-y)^2; y0<y<r; 
 	static int ns; // number of spheres
-	static int ny; // number of cylinders
-	static int nc; // number of cones
 
 	float[][] lightSrc = new float[MAX][3]; // light sources
 	float[][] lightClr = new float[MAX][3]; // light sources color
@@ -30,6 +26,7 @@ public class JOGL3_12_rayTracing extends JOGL3_11_Phong {
 	static int zplane = -2*HEIGHT; // a reflective plane
 
     // replace with a perspective projection
+	@Override
 	public void reshape(GLAutoDrawable glDrawable, int x, int y, int w, int h) {
 
 		    WIDTH = w; HEIGHT = h;
@@ -39,19 +36,23 @@ public class JOGL3_12_rayTracing extends JOGL3_11_Phong {
 		    //projection is carried on the projection matrix
 		    myLoadIdentity();
 		    myOrtho(-WIDTH / 2, WIDTH / 2, -HEIGHT / 2, HEIGHT / 2, -4 * HEIGHT, 4 * HEIGHT); 		    
+			get_Matrix(PROJ); 
+			
+			// connect the PROJECTION matrix to the vertex shader
+			int projLoc = gl.glGetUniformLocation(vfPrograms,  "proj_matrix"); 
+			gl.glProgramUniformMatrix4fv(vfPrograms, projLoc,  1,  false,  PROJ, 0);
 	}
 
 
+	@Override
 	public void display(GLAutoDrawable glDrawable) {
 		float[] viewpt = new float[3], raypt = new float[3];
 		// initial ray: viewpt -> raypt
 
 		float[] color = {0, 0, 0}; // traced color
 
-		ns = (int) (MAX*Math.random()); // random number of spheres
-		ny = (int) (MAX*Math.random()/2); // random number of cylinders
-		nc = (int) (MAX*Math.random()/2); // random number of cones
-		nl = (int) (MAX*Math.random()); // random number of light sources
+		ns = (int) (20*Math.random()); // random number of spheres
+		nl = (int) (20*Math.random()); // random number of light sources
 		
 		// initialize 'ns' number of spheres
 		for (int i = 0; i < ns; i++) {
@@ -60,30 +61,11 @@ public class JOGL3_12_rayTracing extends JOGL3_11_Phong {
 				sphere[i][j] = -WIDTH/2 +(float) (Math.random() * WIDTH); 
 			}
 		}
-		// initialize 'ny' number of cylinders
-		for (int i = 0; i < ny; i++) { //horizontal cylinder: (y-yc)^2 + (z-zc)^2 = r^2; x0<x<x1 
-			cylinder[i][0] = 5 + (float) (Math.random() * WIDTH)/15; // Cylinder radius
-			for (int j = 1; j < 3; j++) { // yc, zc (center), x0, x1 (two ends)
-				cylinder[i][j] = -WIDTH/2 +(float) (Math.random() * WIDTH); 
-			}
-			// x0, x1 (two ends)
-			cylinder[i][3] = -WIDTH/2 +(float) (Math.random() * WIDTH); 
-			cylinder[i][4] = cylinder[i][3] +(float) (Math.random() * WIDTH/4); 
-			
-
-		}
-		// initialize 'nc' number of cones
-		for (int i = 0; i < nc; i++) { // vertical cone: (x-xc)^2 + (z-zc)^2 = (r-y)^2; y0<y<r; 
-			cone[i][0] = 5 + (float) (Math.random() * WIDTH)/8; // cone radius
-			for (int j = 1; j < 4; j++) { //cone: xc, zc (center), and y0 (base y= r-y0) 
-				cone[i][j] = -WIDTH/2 +(float) (Math.random() * WIDTH); 
-			}
-		}
 
 		// initialize 'nl' light source locations
 		for (int i = 0; i < nl; i++) {
 			for (int j = 0; j < 3; j++) { // light source positions
-				lightSrc[i][j] = -1000*WIDTH + (float) (2000*Math.random()*WIDTH); 
+				lightSrc[i][j] = -40*WIDTH + (float) (80*Math.random()*WIDTH); 
 				lightClr[i][j] = (float)((Math.random() * WIDTH)/WIDTH); 
 			}
 		}
@@ -127,7 +109,6 @@ public class JOGL3_12_rayTracing extends JOGL3_11_Phong {
 
 		float[] reflectClr = new float[3], transmitClr = new float[3];
 		float[] rpoint = new float[3]; // a point on ray direction
-		float[] tpoint = new float[3]; // a point on ray direction
 		float[] rD = new float[3]; // ray direction
 		float[] vD = new float[3]; // view direction
 		float[] n = new float[3]; // normal
@@ -163,41 +144,22 @@ public class JOGL3_12_rayTracing extends JOGL3_11_Phong {
 				for (int i = 0; i < 3; i++) {
 					// a point on the reflected ray starting from p
 					rpoint[i] = rD[i] + p[i];
-					tpoint[i] = -vD[i] + p[i] + n[i]*0.01f;
 				}
 				
 				// recursion to find a bounce at lower level
 				rayTracing(reflectClr, p, rpoint, depth - 1);
 
 				// let's say the yPlane is transparent 
-				if (n[1] == 1) // normal 
-					rayTracing(transmitClr, p, tpoint, depth - 1);
-				
 				for (int i = 0; i < 3; i++) {
-					color[i] = (color[i] + 0.9f*reflectClr[i] + 0.7f*transmitClr[i]);
+					// a point on the transmitted ray starting from p
+					rpoint[i] = -vD[i] + p[i];
+				}
+				if (n[1] == 1) // normal 
+					rayTracing(transmitClr, p, rpoint, depth - 1);
+				for (int i = 0; i < 3; i++) {
+					color[i] = (color[i] + 0.9f*reflectClr[i] + 0.9f*transmitClr[i]);
 					if (color[i] > 1) //color values are not normalized. 
 						color[i] = 1; 
-				}
-			}
-			else { // calculate if it hits any light sources
-				float[] lD = new float[3]; // lightSrc direction
-
-				for (int i = 0; i < 3; i++) {
-					rD[i] = rpt[i] - vpt[i];
-				}
-				normalize(rD);
-				
-				for (int i=0; i<nl; i++) {
-					for (int j = 0; j < 3; j++) {
-						lD[j] = lightSrc[i][j] - vpt[j];
-					}
-					normalize(lD);
-					float Lsrc; 
-					Lsrc=dotprod(rD, lD); 
-					Lsrc = (float) Math.pow(Lsrc, 120); 
-					for (int j = 0; j < 3; j++) {
-						color[j] = color[j] + lightClr[i][j]*Lsrc/nl;
-					}
 				}
 			}
 			
@@ -230,7 +192,7 @@ public class JOGL3_12_rayTracing extends JOGL3_11_Phong {
 				normalize(s);
 
 				float diffuse = dotprod(lgtsd, n);
-				float specular = (float) Math.pow(dotprod(s, n), 120);
+				float specular = (float) Math.pow(dotprod(s, n), 100);
 
 				if (diffuse < 0)
 					diffuse = 0;
@@ -294,112 +256,6 @@ public class JOGL3_12_rayTracing extends JOGL3_11_Phong {
 				}
 			}
 		}
-		
-		// calculate intersection of ray with the closest Cylinder
-		// Ray equation:
-		// y/z = vpt + t*(rpt - vpt);
-		// Cylinder equation:
-		// horizontal cylinder: (y-yc)^2 + (z-zc)^2 = r^2; x0<x<x1 
-		// We can solve quadratic formula for t and find the intersection
-		// t has to be > 0 to intersect with an object
-
-		if (t==0) // not hitting a sphere
-		for (int i = 0; i < ny; i++) { // for each cylinder
-			a = vpt[1] - cylinder[i][1]; // y component with t
-			b = rpt[1] - vpt[1]; // y component
-			c = vpt[2] - cylinder[i][2]; // z component
-			d = rpt[2] - vpt[2]; // z component with t
-
-			float A = b * b + d * d;
-			float B = 2 * (a * b + c * d);
-			float C = a * a + c * c  - cylinder[i][0] * cylinder[i][0];
-
-			float answers[] = new float[2];
-
-			if (quadraticFormula(A,B,C,answers)) {// intersection
-				if (answers[0] < answers[1]) {
-					t = answers[0];
-				}
-				else {  t = answers[1]; }
-				
-				if (t < 0.001) {
-					t = 0; 
-					break;
-				}
-				else {
-					// return point and normal
-					point[0] = vpt[0] + t * (rpt[0] - vpt[0]);
-					point[1] = vpt[1] + t * (rpt[1] - vpt[1]);
-					point[2] = vpt[2] + t * (rpt[2] - vpt[2]);
-					
-					if (point[0]<cylinder[i][3] || point[0]>cylinder[i][4]) {
-						t=0; 
-						break; // outside cylinder
-					}
-					
-					normal[0] = 0;
-					normal[1] = point[1] - cylinder[i][1];
-					normal[2] = point[2] - cylinder[i][2];
-				}
-			}
-		}
-		
-		// calculate intersection of ray with the closest Cone
-		// Ray equation:
-		// x/y/z = vpt + t*(rpt - vpt);
-		// Cone equation:
-		// vertical cone: (x-xc)^2 + (z-zc)^2 = (r-y)^2; y0<y<r; 
-		// We can solve quadratic formula for t and find the intersection
-		// t has to be > 0 to intersect with an object
-/*
-		if (t==0) // not hitting a sphere
-		for (int i = 0; i < nc; i++) { // for each cone
-			a = vpt[0] - cone[i][1]; // x component with t
-			b = rpt[0] - vpt[0]; // x component
-			c = vpt[1] - cone[i][0]; // y component
-			d = rpt[1] - vpt[1]; // y component with t
-			e = vpt[2] - cone[i][2]; // z component
-			f = rpt[2] - vpt[2]; // z component with t
-
-			float A = b*b + f*f - d*d;
-			float B = 2 * (a * b + e*f - c * d);
-			float C = a * a + e*e - c * c;
-
-			float answers[] = new float[2];
-
-			if (quadraticFormula(A,B,C,answers)) {// intersection
-				if (answers[0] < answers[1]) {
-					t = answers[0];
-				}
-				else {  t = answers[1]; }
-				
-				if (t < 0.001) {
-					t = 0; 
-					break;
-				}
-				else {
-					// return point and normal
-					point[0] = vpt[0] + t * (rpt[0] - vpt[0]);
-					point[1] = vpt[1] + t * (rpt[1] - vpt[1]);
-					point[2] = vpt[2] + t * (rpt[2] - vpt[2]);
-					
-					if (point[1]<cone[i][3] || point[1]>cone[i][0]) {
-						t=0; 
-						break; // outside cylinder
-					}
-					
-					normal[0] = point[0] - cone[i][1];
-					normal[1] = point[1] - cone[i][3];
-					normal[2] = point[2] - cone[i][2];
-
-
-				}
-			}
-		}
-		
-*/			
-		
-		
 		// calculate ray intersect with plane y = yplane
 		// y = vpt + t(rpt - vpt) = yplane; => t = (yplane - vpt)/(rpt -vpt);
 
@@ -435,8 +291,8 @@ public class JOGL3_12_rayTracing extends JOGL3_11_Phong {
 			ipoint[2] = zplane;
 
 			// if x&z in the rectangle, intersect with plane
-			if ((ipoint[0] > -HEIGHT/1.5) && (ipoint[0] < HEIGHT/1.5)
-					&& (ipoint[1] > -HEIGHT/1.5) && (ipoint[1] < HEIGHT/1.5)
+			if ((ipoint[0] > -HEIGHT) && (ipoint[0] < HEIGHT)
+					&& (ipoint[1] > -HEIGHT) && (ipoint[1] < HEIGHT)
 					&& t > 0) {
 				// plane normal
 				point[0] = ipoint[0];
@@ -448,15 +304,6 @@ public class JOGL3_12_rayTracing extends JOGL3_11_Phong {
 			}
 		}		
 	}
-	
-	// cros product of two vectors
-	public void crossprod(float[] a, float[] b, float[] v) {
-
-		v[0] = a[1] * b[2] - a[2] * b[1];
-		v[1] = a[2] * b[0] - a[0] * b[2];
-		v[2] = a[0] * b[1] - a[1] * b[0];
-	}
-
 	
 	// dot product of two vectors
 	public float dotprod(float[] a, float[] b) {
@@ -487,7 +334,8 @@ public class JOGL3_12_rayTracing extends JOGL3_11_Phong {
 		}
 	}
 	
-	
+
+	@Override
 	public void init(GLAutoDrawable drawable) { // reading new vertex & fragment shaders
 		gl = (GL4) drawable.getGL();
 		String vShaderSource[], fShaderSource[] ;
@@ -502,6 +350,6 @@ public class JOGL3_12_rayTracing extends JOGL3_11_Phong {
 	
 
 	public static void main(String[] args) {
-		JOGL3_12_rayTracing f = new JOGL3_12_rayTracing();
+		new JOGL3_12_rayTracing();
 	}
 }

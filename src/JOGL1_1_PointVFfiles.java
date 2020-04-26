@@ -18,27 +18,26 @@ import com.jogamp.opengl.*;
 
 public class JOGL1_1_PointVFfiles extends JOGL1_0_Point {
 
-	//public JOGL1_1_PointVFfiles() { // it calls supers constructor first
-	//}
+	public JOGL1_1_PointVFfiles() { // it calls supers constructor first
+	}
 	
 	
 	public void init(GLAutoDrawable drawable) {
 		gl = (GL4) drawable.getGL();
 		String vShaderSource[], fShaderSource[] ;
 		
-		// shader file conventions: Vertex and Fragment shaders
 		vShaderSource = readShaderSource("src/JOGL1_1_V.shader"); // read vertex shader
 		fShaderSource = readShaderSource("src/JOGL1_1_F.shader"); // read fragment shader
 		
 		initShaders(vShaderSource, fShaderSource);		
 	}
 
-
-
+	
+	
 	public String[] readShaderSource(String filename) { // read a shader file into an array
 		Vector<String> lines = new Vector<String>(); // Vector object for storing shader program
 		Scanner sc;
-
+		
 		try {
 			sc = new Scanner(new File(filename)); //Scanner object for reading a shader program
 		} catch (IOException e) {
@@ -52,7 +51,7 @@ public class JOGL1_1_PointVFfiles extends JOGL1_0_Point {
 		for (int i = 0; i < lines.size(); i++) {
 			shaderProgram[i] = (String) lines.elementAt(i) + "\n";
 		}
-		sc.close();
+		sc.close(); 
 		return shaderProgram; // a string of shader programs
 	}
 	

@@ -1,4 +1,4 @@
-#version 410
+#version	430	
 
 uniform float Width; // Viewport Width 
 uniform float Height; // Viewport Height 

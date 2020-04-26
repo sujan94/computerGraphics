@@ -1,281 +1,437 @@
-/* draw a cone solar system with collisions of the moons */
-
+import com.jogamp.common.nio.Buffers;
+import com.jogamp.opengl.GL4;
 import com.jogamp.opengl.GLAutoDrawable;
-import com.jogamp.opengl.util.gl2.GLUT;
+import com.jogamp.opengl.util.FPSAnimator;
 
-import static com.jogamp.opengl.GL.GL_COLOR_BUFFER_BIT;
-import static com.jogamp.opengl.GL.GL_DEPTH_BUFFER_BIT;
+import javax.swing.*;
+import java.nio.FloatBuffer;
+import java.util.ArrayList;
 
-public class H3_sprajap2 extends JOGL2_11_ConeSolar {
-    // direction and speed of rotation
-    static float coneD = WIDTH / 110000f;
+import static com.jogamp.opengl.GL.*;
+import static com.jogamp.opengl.GL2ES3.GL_COLOR;
 
-    static float sphereD = -WIDTH / 640000f;
+public class H3_sprajap2 extends JOGL1_1_PointVFfiles{
 
-    static float cylinderD = WIDTH / 300000f;
+    private static final double RADIUS = 0.7;
+    private static final int BOUNCING_POINTS_COUNT = 1000;
+    private static final double ANGLE_INCREMENT = 2 * Math.PI / BOUNCING_POINTS_COUNT;
+    private static final float PENTAGON_POINT_MOVE_THETA_VALUE = 0.5f;
 
-    static float spherem = 0.00012f, cylinderm = 0.000024f;
+    FPSAnimator animator; // for thread that calls display() repetitively
 
-    static float  conem = 0.05f; // centers of the objects
+    // vertex array object (handle), for sending to the vertex shader
+    int[] vao = new int[1];
+    // vertex buffers objects (handles) to stores position, color, normal, etc
+    int[] vbo = new int[2];
+    // handle to shader programs
+    int vfPrograms;
+    private final float[] circlePointList;
+    private final float[] nameFirstInitials;
+    private final float[] nameLastInitials;
+    private double currentAngle = 0;
+    private float angle = 0;
 
-    static float[] coneC = new float[3];
+    private static float[][][] myMatStack = new float[24][4][4]; // 24 layers for push and pop
+    private static int stackPtr = 0;
 
-    static float[] sphereC = new float[3];
+    public H3_sprajap2() {
+        // Frame per second animator
+        animator = new FPSAnimator(canvas, 40); // 40 calls per second; frame rate
+        animator.start();
+        System.out.println("A thread that calls display() repeatitively.");
+        circlePointList = generateCirclePoints();
+        nameFirstInitials = generateInitialPoints('s');
+        nameLastInitials = generateInitialPoints('p');
+    }
 
-    static float[] cylinderC = new float[3];
-    static float[] earthC = new float[3];
+    private float[] generateInitialPoints(char c) {
+        int count = 0;
+        ArrayList<Float> vPoint = new ArrayList<>();
+        switch (java.lang.Character.toUpperCase(c)) {
+            case 'S':
+                vPoint.add(count++, (float) (RADIUS+ 0.8));
+                vPoint.add(count++, (float) (RADIUS+ 0.8));
+                vPoint.add(count++, (float) (RADIUS+ 0.2));
+                vPoint.add(count++, (float) (RADIUS+ 0.8));
+                vPoint.add(count++, (float) (RADIUS+ 0.2));
+                vPoint.add(count++, (float) (RADIUS+ 0.5));
+                vPoint.add(count++, (float) (RADIUS+ 0.8));
+                vPoint.add(count++, (float) (RADIUS+ 0.5));
+                vPoint.add(count++, (float) (RADIUS+ 0.8));
+                vPoint.add(count++, (float) (RADIUS+ 0.2));
+                vPoint.add(count++, (float) (RADIUS+ 0.2));
+                vPoint.add(count, (float) (RADIUS+ 0.2));
+                break;
+            case 'P':
+                vPoint.add(count++, (float) (RADIUS+ 0.8));
+                vPoint.add(count++, (float) (RADIUS+ 0.8));
+                vPoint.add(count++, (float) (RADIUS+ 0.2));
+                vPoint.add(count++, (float) (RADIUS+ 0.8));
+                vPoint.add(count++, (float) (RADIUS+ 0.2));
+                vPoint.add(count++, (float) (RADIUS+ 0.5));
+                vPoint.add(count++, (float) (RADIUS+ 0.2));
+                vPoint.add(count++, (float) (RADIUS+ 0.2));
+                vPoint.add(count++, (float) (RADIUS+ 0.2));
+                vPoint.add(count++, (float) (RADIUS+ 0.5));
+                vPoint.add(count++, (float) (RADIUS+ 0.8));
+                vPoint.add(count++, (float) (RADIUS+ 0.5));
+                vPoint.add(count++, (float) (RADIUS+ 0.8));
+                vPoint.add(count, (float) (RADIUS+ 0.8));
+                break;
+            default:
+                JOptionPane.showMessageDialog(null, "Invalid input. We only support 's', 'S', 'p' and 'P' at the moment.", "Unsupported Input Error", JOptionPane.ERROR_MESSAGE);
+                dispose();
+                System.exit(0);
+                break;
+        }
 
-    // current matrix on the matrix stack
+        float[] list = new float[vPoint.size()];
+        for (int i = 0; i < vPoint.size(); i++) {
+            list[i] = vPoint.get(i);
+        }
+        return list;
+    }
 
-    static float[] currM = new float[16];
+    private float[] generateCirclePoints() {
+        double currentAngle = 0;
+        // I could do theta = theta + 1/r;
+        float[] circlePoints = new float[3 * BOUNCING_POINTS_COUNT]; // predefined number of pixels on the line
 
-    int w = WIDTH, h = HEIGHT;
+        for (int i = 0; i < BOUNCING_POINTS_COUNT; i++) {
+            currentAngle += ANGLE_INCREMENT;
+            float x = (float) (RADIUS * Math.cos(currentAngle));
+            float y = (float) (RADIUS * Math.sin(currentAngle));
+
+            // write a pixel into the framebuffer, here we write into an array
+            circlePoints[(i * 3)] = x; // normalize -1 to 1
+            circlePoints[(i * 3) + 1] = y; // normalize -1 to 1
+            circlePoints[(i * 3) + 2] = 0.0f;
+        }
+        return circlePoints;
+    }
+
 
     @Override
-    public void display(GLAutoDrawable glDrawable) {
-        cnt++;
-        depth = (cnt / 50) % 6;
+    public void display(GLAutoDrawable drawable) {
+        // Clear the frame, so that we can see the color changing (Animation)
+        float[] bgColor = {0.0f, 0.0f, 0.0f, 1.0f};
+        FloatBuffer bgColorBuffer = Buffers.newDirectFloatBuffer(bgColor);
+        gl.glClearBufferfv(GL_COLOR, 0, bgColorBuffer); // clear every frame
+        myLoadIdentity();
+        // change the size of the points
+        drawCircle();
+        gl.glPointSize(2.0f);
+        drawBouncingPoint();
 
-        gl.glClear(GL_COLOR_BUFFER_BIT |
-                GL_DEPTH_BUFFER_BIT);
+        try {
+            Thread.sleep(200);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        drawPentagon();
+        myLoadIdentity();
 
-        viewPort1();
-        viewPort2();
+
+        myLoadIdentity();
+
+        float valueX = getPointForPentagon()[0]<0? getPointForPentagon()[0]-0.3f:getPointForPentagon()[0];
+        float valueY = getPointForPentagon()[1]<0? getPointForPentagon()[1]-0.2f:getPointForPentagon()[1];
+        myTranslatef(valueX,valueY,0);
+        myScalef(0.1f, 0.1f, 0);
+        drawWithAnimation(nameFirstInitials);
+        myTranslatef(0.8f,0, 0);
+        drawWithAnimation(nameLastInitials);
+
+        myLoadIdentity();
+
+        myLoadIdentity();
+        myTranslatef(0.0f, 0.0f,0);
+        myScalef(0.1f, 0.1f, 0);
+        myRotatef(angle,0,0,1);
+        drawWithAnimation(nameFirstInitials);
+        myTranslatef(0.8f,0, 0);
+        drawWithAnimation(nameLastInitials);
+
+        myLoadIdentity();
+
+        angle-= Math.toRadians(5);
     }
 
-    public void viewPort1() {
+    private float[] getPointForPentagon() {
 
-        gl.glViewport(0, 0, w, h);
-        //drawRobot(O, A, B, C, alpha, beta, gama);
-        drawSolar(WIDTH / 4, 2.5f * cnt, WIDTH / 6, 0);
-        // the objects' centers are retrieved from the above call
+        int limit = 5;
+        float angleIncrement = (360f / 5) + PENTAGON_POINT_MOVE_THETA_VALUE;
+        // I could do theta = theta + 1/r;
+        float[] pentagonPoints = new float[3 * limit]; // predefined number of pixels on the line
+        int i = 0;
+        while (i < pentagonPoints.length) {
+            currentAngle = currentAngle + angleIncrement;
+            float x = (float) (RADIUS * Math.cos(Math.toRadians(currentAngle % 360)));
+            float y = (float) (RADIUS * Math.sin(Math.toRadians(currentAngle % 360)));
+
+            // write a pixel into the framebuffer, here we write into an array
+            pentagonPoints[(i++)] = x; // normalize -1 to 1
+            pentagonPoints[i++] = y; // normalize -1 to 1
+            pentagonPoints[i++] = 0.0f;
+        }
+        return pentagonPoints;
     }
 
-    public void viewPort2() {
-        int w = WIDTH, h = HEIGHT;
+    public void drawPentagon() {
+        float[] pentagonPoints = getPointForPentagon();
 
-        viewPort1();
-        gl.glViewport(0, h / 2, w / 2, h / 2);
-        myPushMatrix();
-        // earthC retrieved in drawSolar() before viewPort3
-        mygluLookAt(sphereC[0], sphereC[1], sphereC[2], earthC[0], earthC[1], earthC[2], earthC[0], earthC[1], earthC[2]);
-        drawSolar(WIDTH / 4, 2.5f * cnt, WIDTH / 6, 0);
-        myPopMatrix();
+        float[] color = new float[15];
+        for (int i = 0; i < color.length; i++) {
+            color[i] = (float) Math.random();
+        }
+
+        gl.glPointSize(15.0f);
+        drawPointArray(pentagonPoints, color, GL_POINTS);
+        drawPointArray(pentagonPoints, color, GL_LINE_LOOP);
     }
 
-    void drawSolar(float E, float e, float M, float m) {
 
-        // Global coordinates
-        gl.glLineWidth(3);
-        drawSphere(); // for loading matrix purpose
-        drawColorCoord(WIDTH / 4, WIDTH / 4, WIDTH / 4);
+    void drawCircle() {
+        // drawing the circle by passing the array to glDrawArray
+        drawPointArray(circlePointList, new float[]{0.0f, 0.0f, 0.0f}, GL_LINE_LOOP);
+    }
 
-        myPushMatrix();
-        myRotatef(e * dg, 0.0f, 1.0f, 0.0f);
-        // rotating around the "sun"; proceed angle
-      //  myRotatef(tiltAngle * dg, 0.0f, 0.0f, 1.0f); // tilt angle
-        myTranslatef(0.0f, E, 0.0f);
-        myPushMatrix();
-        myScalef(WIDTH / 20, WIDTH / 20, WIDTH / 20);
-        drawSphere();
-        get_Matrix(currM);
-        earthC[0] = currM[12];
-        earthC[1] = currM[13];
-        earthC[2] = currM[14];
-        myPopMatrix();
-        myPushMatrix();
-        myScalef(E / 8, E, E / 8);
-        myRotatef(90 * dg, 1.0f, 0.0f, 0.0f); // orient the cone
-        drawCone();
-        myPopMatrix();
-
-        // cone
-        myPushMatrix();
-        conem = conem + coneD;
-        myRotatef(conem, 0.0f, 1.0f, 0.0f);
-        // rotating around the "earth"
-        myTranslatef(M * 2, 0.0f, 0.0f);
-        gl.glLineWidth(2);
-        myScalef(E / 8, E / 8, E / 8);
-        myRotatef(cnt * dg, 0.0f, 1.0f, 0.0f); // self rotation
-        drawCone();
-        drawColorCoord(2, 2, 2);
-        // retrieve the center of the cone
-        get_Matrix(currM);
-
-        coneC[0] = currM[12];
-        coneC[1] = currM[13];
-        coneC[2] = currM[14];
-        myPopMatrix();
-
-        // sphere
-        myPushMatrix();
-        spherem = spherem + sphereD;
-        myRotatef(spherem, 0.0f, 1.0f, 0.0f);
-        // rotating around the "earth"
-        myTranslatef(M * 2, 0.0f, M);
-        gl.glLineWidth(2);
-        myScalef(E / 8, E / 8, E / 8);
-        myRotatef(cnt * dg * 5, 0.0f, 1.0f, 0.0f); // self rotation
-        drawSphere();
-        drawColorCoord(2, 2, 2);
-        // retrieve the center of the sphere
-        get_Matrix(currM);
-        sphereC[0] = currM[12];
-        sphereC[1] = currM[13];
-        sphereC[2] = currM[14];
-        myPopMatrix();
-
-        // cylinder
-        myPushMatrix();
-        cylinderm = cylinderm + cylinderD;
-        myRotatef(3 * cylinderm, 0.0f, 1.0f, 0.0f);
-        // rotating around the "earth"
-        myTranslatef(M * 1.5f, 0.0f, M );
-        gl.glLineWidth(2);
-        myScalef(E / 8, E / 8, E / 8);
-        myRotatef(cnt * dg * 2, 0.0f, 1.0f, 0.0f); // self rotation
-        drawCylinder();
-        drawColorCoord(2, 2, 2);
-        // retrieve the center of the cylinder
-        // the matrix is stored column major left to right
-        get_Matrix(currM);
-        cylinderC[0] = currM[12];
-        cylinderC[1] = currM[13];
-        cylinderC[2] = currM[14];
-        myPopMatrix();
-        myPopMatrix();
-
-        if (distance(coneC, sphereC) < E / 5) {
-            System.out.println("Collision Occured between cone and sphereC");
-            // collision detected, swap the rotation directions
-            sphereD = -1 * sphereD;
-            coneD = -1 * coneD;
+    void drawBouncingPoint() {
+        int numberOfPoints = 20;
+        float[] pointsInCircle = new float[3 * numberOfPoints];
+        float[] color = new float[pointsInCircle.length];
+        for (int i = 0; i < color.length; i++) {
+            color[i] = (float) Math.random();
         }
-        if (distance(coneC, cylinderC) < E / 5) {
-            System.out.println("Collision Occured between cone and cylinder");
-            // collision detected, swap the rotation directions
-            coneD = -1 * coneD;
-            cylinderD = -1 * cylinderD;
+
+        int i = 0;
+        while (i < numberOfPoints) {
+            // randomly pick a theta, in radians
+            double angle = (2 * Math.random() - 1) * (2 * Math.PI);
+            double random_radius = ((2 * Math.random() - 1) * RADIUS);
+
+            float x = (float) (random_radius * Math.cos(angle));
+            float y = (float) (random_radius * Math.sin(angle));
+
+            pointsInCircle[(i * 3)] = x; // normalize -1 to 1
+            pointsInCircle[(i * 3) + 1] = y; // normalize -1 to 1
+            pointsInCircle[(i * 3) + 2] = 0.0f;
+            i++;
         }
-        if (distance(cylinderC, sphereC) < E / 5) {
-            System.out.println("Collision Occured between sphere and cylinder");
-            // collision detected, swap the rotation directions
-            cylinderD = -1 * cylinderD;
-            sphereD = -1 * sphereD;
-        }
+        drawPointArray(pointsInCircle, color, GL_POINTS);
+    }
+
+    public void drawPointArray(float[] vPoint, float[] colorArray, int mode) {
+
+        // prepare Modelview matrix to be sent to the vertex shader as uniform
+        float MV[] = new float[16];
+        get_Matrix(MV); // get the modelview matrix from the matrix stack
+
+        // connect the modelview matrix
+        int mvLoc = gl.glGetUniformLocation(vfPrograms, "mv_matrix");
+        gl.glProgramUniformMatrix4fv(vfPrograms, mvLoc, 1, false, MV, 0);
+
+        // 3. load vbo[0] with vertex data
+        gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]); // use handle 0
+        FloatBuffer vBuf = Buffers.newDirectFloatBuffer(vPoint);
+        gl.glBufferData(GL_ARRAY_BUFFER, vBuf.limit() * Float.BYTES, // # of float * size of floats in bytes
+                vBuf, // the vertex positions
+                GL_STATIC_DRAW); // the data is static
+        gl.glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0); // associate vbo[0] with active vao buffer
+
+        // 4. load vbo[1] with color data
+        gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[1]); // use handle 1
+        FloatBuffer cBuf = Buffers.newDirectFloatBuffer(colorArray);
+        gl.glBufferData(GL_ARRAY_BUFFER, cBuf.limit() * Float.BYTES, // # of float * size of floats in bytes
+                cBuf, // the vertex colors
+                GL_STATIC_DRAW);
+        gl.glVertexAttribPointer(1, 3, GL_FLOAT, false, 0, 0); // associate vbo[1] with active vao buffer
+
+        // Connect JOGL variable with shader variable by name
+        int colorLoc = gl.glGetUniformLocation(vfPrograms, "iColor");
+        gl.glProgramUniform3fv(vfPrograms, colorLoc, 1, cBuf);
+
+        // 6. draw points: VAO has 1 array of corresponding vertices
+        gl.glDrawArrays(mode, 0, (vBuf.limit() / 3));
+    }
+
+    // the vertices are transformed first then drawn
+    public void drawWithAnimation(float[] v1) {
+
+        // send color data to vertex shader through uniform (array): color here is not per-vertex
+        FloatBuffer cBuf = Buffers.newDirectFloatBuffer(new float[]{1.0f, 1.0f, 1.0f});
+
+        //Connect JOGL variable with shader variable by name
+        int colorLoc = gl.glGetUniformLocation(vfPrograms, "iColor");
+        gl.glProgramUniform3fv(vfPrograms, colorLoc, 1, cBuf);
+
+        // prepare Modelview matrix to be sent to the vertex shader as uniform
+        float MV[] = new float[16];
+        get_Matrix(MV); // get the modelview matrix from the matrix stack
+
+        // connect the modelview matrix
+        int mvLoc = gl.glGetUniformLocation(vfPrograms, "mv_matrix");
+        gl.glProgramUniformMatrix4fv(vfPrograms, mvLoc, 1, false, MV, 0);
+
+        // load vbo[0] with vertex data
+        gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]); // use handle 0
+        FloatBuffer vBuf = Buffers.newDirectFloatBuffer(v1);
+        gl.glBufferData(GL_ARRAY_BUFFER, vBuf.limit() * Float.BYTES,  //# of float * size of floats in bytes
+                vBuf, // the vertex positions
+                GL_STATIC_DRAW); // the data is static
+        gl.glVertexAttribPointer(0, 2, GL_FLOAT, false, 0, 0); // associate vbo[0] with active vao buffer
+
+        // draw a triangle
+        gl.glDrawArrays(GL_LINE_STRIP, 0, vBuf.limit() / 2);
     }
 
     // return the current matrix on top of the Modelview matrix stack
     public void get_Matrix(float M[]) {
 
-        for (int i = 0; i < 4; i++ )
-            for (int j = 0; j < 4; j++ )
-                M[i*4+j] = myMatStack[stackPtr][j][i];
+        for (int i = 0; i < 4; i++)
+            for (int j = 0; j < 4; j++)
+                M[i * 4 + j] = myMatStack[stackPtr][j][i];
     }
 
-    public void drawColorCoord(float xlen, float ylen,
-                               float zlen) {
-        GLUT glut = new GLUT();
+    // initialize a matrix to all zeros
+    private void myClearMatrix(float mat[][]) {
 
-        // if (coordOff) return; // cjx for images
-
-        float vColor[] = {1, 0, 0};
-        float vPoint[] = {0, 0, 0, 0, 0, 0};
-
-        vPoint[3] = xlen;
-        drawLineJOGL(vPoint, vColor);
-        vColor[0] = 0; vColor[1] = 1;
-        vPoint[3] = 0;
-        vPoint[4] = ylen;
-        drawLineJOGL(vPoint, vColor);
-        vColor[1] = 0; vColor[2] = 1;
-        vPoint[4] = 0;
-        vPoint[5] = zlen;
-        drawLineJOGL(vPoint, vColor);
-    }
-
-
-    // distance between two points
-    float distance(float[] cl, float[] c2) {
-        float tmp = (c2[0] - cl[0]) * (c2[0] - cl[0]) + (c2[1] - cl[1]) * (c2[1] - cl[1]) + (c2[2] - cl[2]) * (c2[2] - cl[2]);
-        return ((float) Math.sqrt(tmp));
-    }
-
-
-    public void mygluLookAt(
-            double eX, double eY, double eZ,
-            double cX, double cY, double cZ,
-            double upX, double upY, double upZ) {
-        //eye and center are points, but up is a vector
-
-        double[] F = new double[3];
-        double[] UP = new double[3];
-        double[] s = new double[3];
-        double[] u = new double[3];
-
-        F[0] = cX - eX;
-        F[1] = cY - eY;
-        F[2] = cZ - eZ;
-        UP[0] = upX;
-        UP[1] = upY;
-        UP[2] = upZ;
-        normalize(F);
-        normalize(UP);
-        crossProd(F, UP, s);
-        crossProd(s, F, u);
-
-        float[][] M = new float[4][4];
-
-        M[0][0] = (float) s[0];
-        M[1][0] = (float) u[0];
-        M[2][0] = (float) -F[0];
-        M[3][0] = (float) 0;
-        M[0][1] = (float) s[1];
-        M[1][1] = (float) u[1];
-        M[2][1] = (float) -F[1];
-        M[3][1] = (float) 0;
-        M[0][2] = (float) s[2];
-        M[1][2] = (float) u[2];
-        M[2][2] = (float) -F[2];
-        M[3][2] = 0;
-        M[0][3] = 0;
-        M[1][3] = 0;
-        M[2][3] = 0;
-        M[3][3] = 1;
-
-        myMultMatrix(M);
-        myTranslatef((float) -eX, (float) -eY, (float) -eZ);
-    }
-
-
-    public void normalize(double v[]) {
-
-        double d = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
-
-        if (d == 0) {
-            System.out.println("0 length vector: normalize().");
-            return;
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                mat[i][j] = 0.0f;
+            }
         }
-        v[0] /= d;
-        v[1] /= d;
-        v[2] /= d;
     }
 
 
-    public void crossProd(double U[],
-                          double V[], double W[]) {
-        // W = U X V
-        W[0] = U[1] * V[2] - U[2] * V[1];
-        W[1] = U[2] * V[0] - U[0] * V[2];
-        W[2] = U[0] * V[1] - U[1] * V[0];
+    // initialize a matrix to Identity matrix
+    private void myIdentity(float mat[][]) {
+
+        myClearMatrix(mat);
+        for (int i = 0; i < 4; i++) {
+            mat[i][i] = 1.0f;
+        }
+    }
+
+
+    // initialize the current matrix to Identity matrix
+    public void myLoadIdentity() {
+        myIdentity(myMatStack[stackPtr]);
+    }
+
+
+    // multiply the current matrix with mat
+    public void myMultMatrix(float mat[][]) {
+        float matTmp[][] = new float[4][4];
+
+        myClearMatrix(matTmp);
+
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                for (int k = 0; k < 4; k++) {
+                    matTmp[i][j] +=
+                            myMatStack[stackPtr][i][k] * mat[k][j];
+                }
+            }
+        }
+        // save the result on the current matrix
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                myMatStack[stackPtr][i][j] = matTmp[i][j];
+            }
+        }
+    }
+
+
+    // multiply the current matrix with a translation matrix
+    public void myTranslatef(float x, float y, float z) {
+        float T[][] = new float[4][4];
+
+        myIdentity(T);
+
+        T[0][3] = x;
+        T[1][3] = y;
+        T[2][3] = z;
+
+        myMultMatrix(T);
+    }
+
+
+    // multiply the current matrix with a rotation matrix
+    public void myRotatef(float angle, float x, float y, float z) {
+        float R[][] = new float[4][4];
+
+        // normalize the vector: I notices a drifting effect in my implementation
+        // if I am not rotating around a primary axis, it will drift to be larger or smaller
+        x = x / (float) Math.sqrt(x * x + y * y + z * z);
+        y = y / (float) Math.sqrt(x * x + y * y + z * z);
+        z = z / (float) Math.sqrt(x * x + y * y + z * z);
+
+        float c = (float) Math.cos(angle); // gradian
+        float s = (float) Math.sin(angle);
+
+        myIdentity(R);
+
+        R[0][0] = x * x * (1 - c) + c;
+        R[0][1] = x * y * (1 - c) - z * s;
+        R[0][2] = x * z * (1 - c) + y * s;
+        R[1][0] = y * x * (1 - c) + z * s;
+        R[1][1] = y * y * (1 - c) + c;
+        R[1][2] = y * z * (1 - c) - x * s;
+        R[2][0] = z * x * (1 - c) - y * s;
+        R[2][1] = z * y * (1 - c) + x * s;
+        R[2][2] = z * z * (1 - c) + c;
+
+        myMultMatrix(R);
+    }
+
+
+    // multiply the current matrix with a scale matrix
+    public void myScalef(float x, float y, float z) {
+        float S[][] = new float[4][4];
+
+        myIdentity(S);
+
+        S[0][0] = x;
+        S[1][1] = y;
+        S[2][2] = z;
+
+        myMultMatrix(S);
+    }
+
+    @Override
+    public void init(GLAutoDrawable drawable) {
+        System.out.println("\na) Init is called once: ");
+
+        String[] vShaderSource;
+        String[] fShaderSource;
+        gl = (GL4) drawable.getGL();
+
+        System.out.println("	load the shader programs; ");
+
+        vShaderSource = readShaderSource("src/project2/h3_V.shader"); // read vertex shader
+        fShaderSource = readShaderSource("src/project2/hw3_F.shader"); // read fragment shader
+        vfPrograms = initShaders(vShaderSource, fShaderSource);
+
+        // 1. generate vertex arrays indexed by vao
+        gl.glGenVertexArrays(vao.length, vao, 0); // vao stores the handles, starting position 0
+        System.out.println("	Generate VAO: " + vao.length); // we only use one vao
+        gl.glBindVertexArray(vao[0]); // use handle 0
+
+        // 2. generate vertex buffers indexed by vbo: here to store vertices and colors
+        gl.glGenBuffers(vbo.length, vbo, 0);
+        System.out.println("	Generate VBO: " + vbo.length); // we use two: position and color
+
+        // 5. enable VAO with loaded VBO data
+        gl.glEnableVertexAttribArray(0); // enable the 0th vertex attribute: position
+        gl.glEnableVertexAttribArray(1); // enable the 1th vertex attribute: color
+        System.out.println("	Enable corresponding vertex attributes.\n"); // we use two: position and color
     }
 
 
     public static void main(String[] args) {
-        H3_sprajap2 f = new H3_sprajap2();
-        f.setTitle("JOGL H3_sprajap2");
-        f.setSize(WIDTH, HEIGHT);
-        f.setVisible(true);
+        H3_sprajap2 project = new H3_sprajap2();
+        project.setTitle("HW3");
+        project.setVisible(true);
     }
 }

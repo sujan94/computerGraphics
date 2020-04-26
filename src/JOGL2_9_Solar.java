@@ -13,6 +13,8 @@ import com.jogamp.opengl.util.gl2.GLUT;
 
 public class JOGL2_9_Solar extends JOGL2_8_Robot3d {
   
+	  static boolean coordOff=false; // cjx for images
+
 	  public void display(GLAutoDrawable glDrawable) {
 
 	    depth = (cnt/100)%7;
@@ -22,7 +24,7 @@ public class JOGL2_9_Solar extends JOGL2_8_Robot3d {
 	               GL.GL_DEPTH_BUFFER_BIT);
 
 //	    myRotatef(0.01f, 0.5f, 0f, 0.5f); 
-	    drawSolar(WIDTH/4, 2*cnt*dg, WIDTH/6, cnt*dg);
+	    drawSolar(WIDTH/4, 2*cnt, WIDTH/12, cnt);
 	  }
 
 
@@ -48,6 +50,19 @@ public class JOGL2_9_Solar extends JOGL2_8_Robot3d {
 	    drawLineJOGL(vPoint, vColor); 
 	    
 /*
+	    gl.glBegin(GL.GL_LINES);
+	    gl.glColor3f(1, 0, 0);
+	    gl.glVertex3f(0, 0, 0);
+	    gl.glVertex3f(0, 0, zlen);
+	    gl.glColor3f(0, 1, 0);
+	    gl.glVertex3f(0, 0, 0);
+	    gl.glVertex3f(0, ylen, 0);
+	    gl.glColor3f(0, 0, 1);
+	    gl.glVertex3f(0, 0, 0);
+	    gl.glVertex3f(xlen, 0, 0);
+	    gl.glEnd();
+
+	    
 	    // coordinate labels: X, Y, Z
 	    myPushMatrix();
 	    myTranslatef(xlen, 0, 0);
@@ -68,7 +83,8 @@ public class JOGL2_9_Solar extends JOGL2_8_Robot3d {
 	    myScalef(zlen/WIDTH, zlen/WIDTH, 1);
 	    glut.glutStrokeCharacter(GLUT.STROKE_ROMAN, 'Z');
 	    myPopMatrix();
-	        
+	    
+	    
 	    */
 	  }
 
@@ -82,30 +98,27 @@ public class JOGL2_9_Solar extends JOGL2_8_Robot3d {
 			    myPushMatrix();
 				    myScalef(WIDTH/15f, WIDTH/15f, WIDTH/15f);
 				    drawSphere();
-				    gl.glLineWidth(4);
 					drawColorCoord(4f, 4f, 4f);
 			    myPopMatrix();
 	
 	
-			    myRotatef(e, 0.0f, 1.0f, 0.0f);
+			    myRotatef(e/60f, 0.0f, 1.0f, 0.0f);
 			    // rotating around the "sun"; proceed angle
 			    myTranslatef(E, 0.0f, 0.0f);
 	
 	//		    drawColorCoord(WIDTH/6, WIDTH/6, WIDTH/6);
 			    myPushMatrix();
 				    myScalef(WIDTH/20f, WIDTH/20f, WIDTH/20f);
-				    myRotatef(m, 0.0f, 1.0f, 0.0f); //earth's self rotation
+				    myRotatef((e+m)/60f, 0.0f, 1.0f, 0.0f); //earth's self rotation
 				    drawSphere();
-				    gl.glLineWidth(2);
-					drawColorCoord(4f, 4f, 4f);
+					drawColorCoord(3f, 3f, 3f);
 			    myPopMatrix();
 	
-			    myRotatef(m, 0.0f, 1.0f, 0.0f);
+			    myRotatef(m/60f, 0.0f, 1.0f, 0.0f);
 			    // rotating around the "earth"
 			    myTranslatef(M, 0.0f, 0.0f);
 			    myScalef(WIDTH/40f, WIDTH/40f, WIDTH/40f);
 			    drawSphere();
-			    gl.glLineWidth(1);
 			    drawColorCoord(3f, 3f, 3f);
 
 		    myPopMatrix();

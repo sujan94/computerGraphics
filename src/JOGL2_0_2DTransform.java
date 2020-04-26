@@ -14,23 +14,20 @@ import com.jogamp.common.nio.Buffers;
 import com.jogamp.opengl.*;
 
 public class JOGL2_0_2DTransform extends JOGL1_4_5_Circle {
-  public static float myMatStack[][][] = new float[15][4][4]; // 24 layers for push and pop
-  public static int stackPtr = 0;
-
-  // prepare Modelview matrix to be sent to the vertex shader as uniform	
-
+  private static float myMatStack[][][] = new float[24][4][4]; // 24 layers for push and pop
+  private static int stackPtr = 0;
+  static float vdata[][] = { {1.0f, 0.0f, 0.0f}
+                           , {0.0f, 1.0f, 0.0f}
+                           , {-1.0f, 0.0f, 0.0f}
+                           , {0.0f, -1.0f, 0.0f}
+  };
   static int cnt = 1;
+  float color[] = {1, 1, 1}; 
 
 
   // called for OpenGL rendering every reshape
   public void display(GLAutoDrawable drawable) {
 
-	  float vdata[][] = { 	  {1.0f, 0.0f, 0.0f}  
-			  				, {0.0f, 1.0f, 0.0f}
-      						, {-1.0f, 0.0f, 0.0f}
-      						, {0.0f, -1.0f, 0.0f}
-	  };
-	  
     if (cnt<1||cnt>200) {
       flip = -flip;
     }
@@ -40,7 +37,6 @@ public class JOGL2_0_2DTransform extends JOGL1_4_5_Circle {
 
     // white triangle is scaled
     color[0] = 1;  color[1] = 1;   color[2] = 1; 
-    uploadColor(color); // send the color as uniform to the vertex shader 
     
     myLoadIdentity();
     myScalef((float) cnt/200f, (float) cnt/200f, 1f);
@@ -48,25 +44,39 @@ public class JOGL2_0_2DTransform extends JOGL1_4_5_Circle {
 
     // red triangle is rotated and scaled
     color[0] = 1;  color[1] = 0;   color[2] = 0; 
-    uploadColor(color); // send the color as uniform to the vertex shader 
     
    myRotatef((float)cnt/20, 0, 0, 1f);
    transDrawTriangle(vdata[0], vdata[1], vdata[2]);
 
     // green triangle is translated, rotated, and scaled
     color[0] = 0;  color[1] = 1;   color[2] = 0; 	
-    uploadColor(color); // send the color as uniform to the vertex shader 
-   
+    
     myTranslatef((float)cnt/100f, 0f, 0f);
     transDrawTriangle(vdata[0], vdata[1], vdata[2]);  
   }
-  
+
 
   // the vertices are transformed first then drawn
   public void transDrawTriangle(float[] v1, float[] v2, float[] v3) {
 
-	uploadMV(); // upload current matrix to MV matrix in the shaders
+	// send color data to vertex shader through uniform (array): color here is not per-vertex
+	FloatBuffer cBuf = Buffers.newDirectFloatBuffer(color);
+
+	//Connect JOGL variable with shader variable by name
+	int colorLoc = gl.glGetUniformLocation(vfPrograms,  "iColor"); 
+	gl.glProgramUniform3fv(vfPrograms,  colorLoc, 1, cBuf);
+	  
+	  
+
+	// prepare Modelview matrix to be sent to the vertex shader as uniform	
+	float MV[] = new float [16];
+	get_Matrix(MV); // get the modelview matrix from the matrix stack
 	
+	// connect the modelview matrix
+	int mvLoc = gl.glGetUniformLocation(vfPrograms,  "mv_matrix"); 
+	gl.glProgramUniformMatrix4fv(vfPrograms, mvLoc,  1,  false,  MV, 0);
+
+  
 	// stores the three vertices to be sent to the vertex shader 
 	float v[] = new float[9]; 
     for (int i=0; i<3; i++) v[i] = v1[i]; 
@@ -86,17 +96,14 @@ public class JOGL2_0_2DTransform extends JOGL1_4_5_Circle {
 	// draw a triangle 
     gl.glDrawArrays(GL_TRIANGLES, 0, 3); 
   }
-  
-  void uploadMV() 	{
-	   float MV[] = new float [16];
-	  
-		getMatrix(MV); // get the modelview matrix from the matrix stack
-		
-		// connect the modelview matrix
-		int mvLoc = gl.glGetUniformLocation(vfPrograms,  "mv_matrix"); 
-		gl.glProgramUniformMatrix4fv(vfPrograms, mvLoc,  1,  false,  MV, 0);
 
-  }
+  // return the current matrix on top of the Modelview matrix stack
+  public void get_Matrix(float M[]) {
+		
+		for (int i = 0; i < 4; i++ )
+		for (int j = 0; j < 4; j++ ) 
+			M[i*4+j] = myMatStack[stackPtr][j][i];
+  }		
 
 
 	public void init(GLAutoDrawable drawable) {
@@ -269,16 +276,6 @@ public class JOGL2_0_2DTransform extends JOGL1_4_5_Circle {
 
     stackPtr--;
   }
-  
-  // return the current matrix on top of the Modelview matrix stack
-  public void getMatrix(float M[]) {
-		
-		for (int i = 0; i < 4; i++ )
-		for (int j = 0; j < 4; j++ ) 
-			M[i*4+j] = myMatStack[stackPtr][j][i];
-  }		
-
-
 
 
   public static void main(String[] args) {
@@ -289,5 +286,3 @@ public class JOGL2_0_2DTransform extends JOGL1_4_5_Circle {
     f.setVisible(true);
   }
 }
-
-

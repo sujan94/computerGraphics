@@ -9,35 +9,31 @@ import com.jogamp.opengl.*;
 
 public class JOGL2_3_Robot2d extends JOGL2_2_Reshape {
 	
-	  static float dg = (float) Math.PI /180; 
-	  static float alpha=-40, beta=-40, gama=80,
-		      dalpha = 0.75f, dbeta = 0.75f, dgama = -1.5f;
-	
 	  // homogeneous coordinates
 	  float O[] = {0, 0, 0, 1}, A[] = {300f/(float)WIDTH, 0, 0, 1};
 	  float B[] = {450f/(float) WIDTH, 0, 0, 1}, C[] = {600f/(float)WIDTH, 0, 0, 1};
+	  float alpha=-40, beta=-40, gama=60,
+	      dalpha = 1f, dbeta = 1.2f, dgama = -2f;
 
 	  public void display(GLAutoDrawable glDrawable) {
 
 	    gl.glClear(GL.GL_COLOR_BUFFER_BIT);
 
-	    alpha += dalpha*dg;
-	    beta += dbeta*dg;
-	    gama += dgama*dg;
+	    alpha += dalpha/100;
+	    beta += dbeta/100;
+	    gama += dgama/100;
 
 	    //gl.glColor3f(0, 1, 1);
 	    color[0] = 0;  color[1] = 1;   color[2] = 1; 
-	    uploadColor(color); 
+
 	    transDrawArm1(alpha, beta, gama);
 
 	    //gl.glColor3f(1, 1, 0);
 	    color[0] = 1;  color[1] = 1;   color[2] = 0; 
-	    uploadColor(color); 
 	    transDrawArm2(-beta, -gama, alpha);
 
 	    //gl.glColor3f(1, 0, 1);
 	    color[0] = 1;  color[1] = 0;   color[2] = 1; 
-	    uploadColor(color); 
 	    transDrawArm3(gama, -alpha, -beta);
 	  }
 

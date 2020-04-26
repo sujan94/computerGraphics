@@ -20,6 +20,9 @@ import java.nio.FloatBuffer;
 import com.jogamp.common.nio.Buffers;
 
 public class JOGL2_5_Cone extends JOGL2_4_Robot {
+	float MV[] = new float [16]; // MODELVIEW matrix
+	float PROJ[] = new float [16]; // PROJECTION matrix; 
+
 
 	  public void reshape(
 		      GLAutoDrawable glDrawable,
@@ -36,6 +39,12 @@ public class JOGL2_5_Cone extends JOGL2_4_Robot {
 
 		    //1. make sure the cone is within the viewing volume
 		    myOrtho(-w/2, w/2, -h/2, h/2, -w, w); // look at z near and far
+			get_Matrix(PROJ); 
+			
+			// connect the PROJECTION matrix to the vertex shader
+			int projLoc = gl.glGetUniformLocation(vfPrograms,  "proj_matrix"); 
+			gl.glProgramUniformMatrix4fv(vfPrograms, projLoc,  1,  false,  PROJ, 0);
+
 
 
 		    //gl.glMatrixMode(GL.GL_MODELVIEW);
@@ -47,23 +56,13 @@ public class JOGL2_5_Cone extends JOGL2_4_Robot {
 	  
 	  	// multiply the current matrix with the orthographic projection matrix
 	    void myOrtho(float l, float r, float b, float t, float n, float f) {// look at z near and far
-	    	  float PROJ[] = new float [16];
-
-	    	  float orthoMatrix[][] = {
+	    	float orthoMatrix[][] = {
 	    			{2f/(r-l),  		0, 			0, 		-(r+l)/(r-l)}, 
 	    			{       0,   2f/(t-b), 	  		0, 		-(t+b)/(t-b)}, 
 	    			{       0,          0,  -2f/(f-n), 		-(f+n)/(f-n)}, 
 	    			{       0, 		    0, 		    0, 		           1}
-		    	}; 	   
-	    	  
-		    	myMultMatrix(orthoMatrix); 
-		    	
-				getMatrix(PROJ); 
-				
-				// connect the PROJECTION matrix to the vertex shader
-				int projLoc = gl.glGetUniformLocation(vfPrograms,  "proj_matrix"); 
-				gl.glProgramUniformMatrix4fv(vfPrograms, projLoc,  1,  false,  PROJ, 0);
-
+	    	}; 	    	
+	    	myMultMatrix(orthoMatrix); 
 	    } 
 
 	    
@@ -72,11 +71,13 @@ public class JOGL2_5_Cone extends JOGL2_4_Robot {
 			cnt++;    
 			cRadius += flip;
 			if ((cRadius>(WIDTH/2))|| (cRadius<=1)) {
-				depth++; depth = depth%7;  flip = -flip;
-		    }
+				depth++;
+				depth = depth%7;
+		        flip = -flip;
+		     }
 		   
 			//3. clear both framebuffer and zbuffer
-		    gl.glClear(GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT);
+		    gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT);
 	   
 	    //4. GL_DEPTH_TEST for hidden-surface removal
 	    	gl.glEnable(GL_DEPTH_TEST);
@@ -85,13 +86,13 @@ public class JOGL2_5_Cone extends JOGL2_4_Robot {
 	 
 	   
 	    //5. Test glPolygonMode 
-	         //gl.glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	    	 //gl.glPolygonMode(GL.GL_FRONT_AND_BACK, GL_LINE);
+	         gl.glPolygonMode(GL.GL_FRONT_AND_BACK, GL_FILL);
+	    	 //gl.glPolygonMode(GL.GL_FRONT, GL_LINE);
 	    	 //gl.glPolygonMode(GL.GL_FRONT_AND_BACK, GL_LINE);
 	 
 	    //6. Test glCullFace
-	    	//gl.glEnable(GL_CULL_FACE); 
-	    	//gl.glDisable(GL_CULL_FACE); 
+	    	gl.glEnable(GL_CULL_FACE); 
+	    	gl.glDisable(GL_CULL_FACE); 
 	        //gl.glCullFace(GL_BACK); 
 	        //gl.glCullFace(GL_FRONT);
 
@@ -121,8 +122,10 @@ public class JOGL2_5_Cone extends JOGL2_4_Robot {
 
 	    void drawtriangle(float v0[], float v1[], float v2[]) {
 		// connect the modelview matrix
-		    uploadMV(); // get the modelview matrix from the matrix stack
- 
+		    get_Matrix(MV); // get the modelview matrix from the matrix stack
+		    int mvLoc = gl.glGetUniformLocation(vfPrograms,  "mv_matrix"); 
+		    gl.glProgramUniformMatrix4fv(vfPrograms, mvLoc,  1,  false,  MV, 0);  
+		    
 		    count = 0; 
 		    
 			// load vPoints with the triangle vertex values
@@ -142,7 +145,7 @@ public class JOGL2_5_Cone extends JOGL2_4_Robot {
 			gl.glDrawArrays(GL_TRIANGLES, 0, 3); 
 	    }
 	    
-	   void subdivideCone(float vPoints[],float v1[],
+	  private void subdivideCone(float vPoints[],float v1[],
 			  float v2[], int depth) {
 		  float v0[] = {0, 0, 0};
 		  float v12[] = new float[3];
@@ -191,8 +194,12 @@ public class JOGL2_5_Cone extends JOGL2_4_Robot {
 	    
 	    // send the current MODELVIEW matrix and the vertices to the vertex shader
 	    // color is generated according to the logical coordinates   
-	    uploadMV(); // get the modelview matrix from the matrix stack
+	    get_Matrix(MV); // get the modelview matrix from the matrix stack
 		
+		// connect the modelview matrix
+		int mvLoc = gl.glGetUniformLocation(vfPrograms,  "mv_matrix"); 
+		gl.glProgramUniformMatrix4fv(vfPrograms, mvLoc,  1,  false,  MV, 0);  
+
 		// load vbo[0] with vertex data
 		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]); // use handle 0 		
 		FloatBuffer vBuf = Buffers.newDirectFloatBuffer(vPoints);

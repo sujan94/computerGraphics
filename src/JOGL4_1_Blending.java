@@ -36,7 +36,7 @@ public class JOGL4_1_Blending extends JOGL3_11_Phong {
 	  float L3_diffuse[] = {0.1f, 0.1f, 1, 0.1f}; // Light source property: diffuse 
 	  float L3_position[] = {4*WIDTH, 4*WIDTH, 4*WIDTH, 1}; // Light source property: position
 	  
-	  
+	  /**
 		 void drawSolar(float E, float e, float M, float m) {
 
 			 float tiltAngle = 45; 
@@ -301,7 +301,7 @@ public class JOGL4_1_Blending extends JOGL3_11_Phong {
 			     drawRobot(O, A, B, C, alpha*dg, beta*dg, gama*dg);
 			    myPopMatrix();
 	  }
-
+	   */
 	  
 	  
 	  

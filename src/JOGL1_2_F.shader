@@ -1,10 +1,8 @@
-#version 410
+#version	430	
 
-out vec4 color; // out to the framebuffer
+out vec4 color; 
 
 void main(void) { 
-
-	// physical coordinates: in number of pixels corresponding to the viewport
 
 	if (gl_FragCoord.x	<	200)  //fragment in device coordinates 
 		color =	vec4(1.0,	0.0,	0.0,	1.0);	

@@ -28,7 +28,7 @@ public class JOGL3_4_Diffuse extends JOGL3_3_Ambient {
 	  // when we get the vertex position. 
 
 	  
-	  void subdivideCone(float vPoints[], float vNormals[], float v1[],
+	  private void subdivideCone(float vPoints[], float vNormals[], float v1[],
 			  float v2[], int depth) {
 		  float v0[] = {0, 0, 0};
 		  float v12[] = new float[3];
@@ -78,8 +78,11 @@ public class JOGL3_4_Diffuse extends JOGL3_3_Ambient {
 	    
 	    // send the current MODELVIEW matrix and the vertices to the vertex shader
 	    // color is generated according to the logical coordinates   
-	    uploadMV(); // get the modelview matrix from the matrix stack
+	    get_Matrix(MV); // get the modelview matrix from the matrix stack
 		
+		// connect the modelview matrix
+		int mvLoc = gl.glGetUniformLocation(vfPrograms,  "mv_matrix"); 
+		gl.glProgramUniformMatrix4fv(vfPrograms, mvLoc,  1,  false,  MV, 0);  
 
 		// load vbo[0] with vertex data
 		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]); // use handle 0 		
@@ -102,7 +105,7 @@ public class JOGL3_4_Diffuse extends JOGL3_3_Ambient {
 
 	  
 	  
-	  void subdivideCylinder(float vPoints[],float vNormals[],float v1[],
+	  private void subdivideCylinder(float vPoints[],float vNormals[],float v1[],
 			  float v2[], int depth) {
 		  float v0[] = {0, 0, 0};
 		  float v12[] = new float[3];
@@ -185,10 +188,15 @@ public class JOGL3_4_Diffuse extends JOGL3_3_Ambient {
 	    subdivideCylinder(vPoints, vNormals, cVdata[1], cVdata[2], depth);
 	    subdivideCylinder(vPoints, vNormals, cVdata[2], cVdata[3], depth);
 	    subdivideCylinder(vPoints, vNormals, cVdata[3], cVdata[0], depth);
+	    
 	    // send the current MODELVIEW matrix and the vertices to the vertex shader
 	    // color is generated according to the logical coordinates   
-	    uploadMV(); // get the modelview matrix from the matrix stack
+	    get_Matrix(MV); // get the modelview matrix from the matrix stack
 		
+		// connect the modelview matrix
+		int mvLoc = gl.glGetUniformLocation(vfPrograms,  "mv_matrix"); 
+		gl.glProgramUniformMatrix4fv(vfPrograms, mvLoc,  1,  false,  MV, 0);  
+
 		// load vbo[0] with vertex data
 		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]); // use handle 0 		
 		FloatBuffer vBuf = Buffers.newDirectFloatBuffer(vPoints);
@@ -265,8 +273,10 @@ public class JOGL3_4_Diffuse extends JOGL3_3_Ambient {
 
 	    
 	    // send the current MODELVIEW matrix and the vertices to the vertex shader
-	    uploadMV(); // get the modelview matrix from the matrix stack
+	    get_Matrix(MV); // get the modelview matrix from the matrix stack
 		// connect the modelview matrix
+		int mvLoc = gl.glGetUniformLocation(vfPrograms,  "mv_matrix"); 
+		gl.glProgramUniformMatrix4fv(vfPrograms, mvLoc,  1,  false,  MV, 0);  
 
 		// load vbo[0] with vertex data
 		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]); // use handle 0 		
@@ -278,13 +288,13 @@ public class JOGL3_4_Diffuse extends JOGL3_3_Ambient {
 				
 		// load vbo[1] with vertex normal data
 		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[1]); // use handle 1 		
-		FloatBuffer nBuf = Buffers.newDirectFloatBuffer(vNormals);
-		gl.glBufferData(GL_ARRAY_BUFFER, nBuf.limit()*Float.BYTES,  //# of float * size of floats in bytes
-				nBuf, // the vertex array
+		vBuf = Buffers.newDirectFloatBuffer(vNormals);
+		gl.glBufferData(GL_ARRAY_BUFFER, vBuf.limit()*Float.BYTES,  //# of float * size of floats in bytes
+				vBuf, // the vertex array
 				GL_STATIC_DRAW); 
 		gl.glVertexAttribPointer(1, 3, GL_FLOAT, false, 0, 0); // associate vbo[1] with active VAO buffer
-
-		gl.glDrawArrays(GL_TRIANGLES, 0, vBuf.limit()/3);
+				
+		gl.glDrawArrays(GL_TRIANGLES, 0, vBuf.limit()/3); 
 	  }
 
 

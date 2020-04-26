@@ -12,13 +12,16 @@ import static com.jogamp.opengl.GL.GL_DEPTH_BUFFER_BIT;
 import static com.jogamp.opengl.GL4.*; 
 
 
-public class JOGL2_13_TravelSolar extends JOGL2_12_RobotSolar {
+public class JOGL2_13_TravelSolar extends JOGL2_11_ConeSolar {
   
  		  public void display(GLAutoDrawable glDrawable) {
  			    cnt++;
- 			    depth = (cnt/100)%7;
+ 			    depth = (cnt/50)%7;
 
-  			    if (cnt%150==0) {
+ 			    gl.glClear(GL_COLOR_BUFFER_BIT|
+ 			               GL_DEPTH_BUFFER_BIT);
+
+ 			    if (cnt%60==0) {
  			      dalpha = -dalpha;
  			      dbeta = -dbeta;
  			      dgama = -dgama;
@@ -27,17 +30,14 @@ public class JOGL2_13_TravelSolar extends JOGL2_12_RobotSolar {
  			    beta += dbeta;
  			    gama += dgama;
 
-			    gl.glClear(GL_COLOR_BUFFER_BIT|
-			               GL_DEPTH_BUFFER_BIT);
-
 
  			    myPushMatrix();
  			      // moving the camera from the origin to the moon
  			      // the transformation is reasoned from top down
- 			    if (cnt%2000<1111) 
- 				 myCamera(WIDTH/3, 2f*cnt, WIDTH/3, spherem); 			    
- 			    // drawSolar(WIDTH/4, 2*cnt*dg, WIDTH/6, cnt*dg);
- 			     drawRobot(O, A, B, C, alpha*dg, beta*dg, gama*dg);
+ 			   if (cnt%500<250) 
+ 				   myCamera(WIDTH/4, 2.5f*cnt, WIDTH/6, 1.5f*cnt); 			    
+ 			     drawSolar(WIDTH/4, 2.5f*cnt, WIDTH/6, 1.5f*cnt);
+ 			     //drawRobot(O, A, B, C, alpha, beta, gama);
  			    myPopMatrix();
 		  }
 
@@ -46,7 +46,6 @@ public class JOGL2_13_TravelSolar extends JOGL2_12_RobotSolar {
  			      float e,
  			      float M,
  			      float m) {
- 			  float tiltAngle = 45; 
 
 			    //1. camera faces the negative x axis
  			    myRotatef(-90*dg, 0, 1, 0);
@@ -63,14 +62,7 @@ public class JOGL2_13_TravelSolar extends JOGL2_12_RobotSolar {
  			    // rotating around the "sun"; proceed angle
  			    myRotatef(-e*dg, 0, 1, 0);
  			    
- 			    // and reversing the robot transformation
- 			    myTranslatef(-C+B, 0, 0);
- 			    myRotatef(-gama*dg, 0, 0, 1);
- 			    myTranslatef(-B+A, 0, 0);
- 			    myRotatef(-beta*dg, 0, 0, 1);
- 			    myTranslatef(-A, 0, 0);
- 			    myRotatef(-alpha*dg, 0, 0, 1);
- 			    myRotatef(-cnt*dg, 0, 1, 0);			  }
+ 			  }
 
 
 	  

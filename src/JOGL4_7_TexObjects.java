@@ -67,7 +67,7 @@ public class JOGL4_7_TexObjects extends JOGL4_6_Texture {
 
 	    
 	    // send the current MODELVIEW matrix and the vertices to the vertex shader
-	    uploadMV(); // get the modelview matrix from the matrix stack
+	    // todo uploadMV(); // get the modelview matrix from the matrix stack
 
 		// load vbo[0] with vertex data
 		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]); // use handle 0 		
@@ -96,6 +96,7 @@ public class JOGL4_7_TexObjects extends JOGL4_6_Texture {
 
 	  }
 
+	  /**
 		 void drawSolar(float E, float e, float M, float m) {
 			 float tiltAngle = 45; 
 			 float tmp[] = {0, 0, 0, 1}; 
@@ -222,7 +223,7 @@ public class JOGL4_7_TexObjects extends JOGL4_6_Texture {
 			      } 
 		    }	  
 	  
-
+	**/
 	  
 	  
 	public void init(GLAutoDrawable drawable) {

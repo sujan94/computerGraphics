@@ -8,25 +8,27 @@
 import com.jogamp.opengl.*;
 
 public class JOGL2_8_Robot3d extends JOGL2_7_Sphere {
-	  static float O = 0;
-	  static float A = (float)0.3*WIDTH;
-	  static float B = (float)0.55*WIDTH;
-	  static float C = (float)0.7*WIDTH;
+  
+	  float O = 0;
+	  float A = (float)0.3*WIDTH;
+	  float B = (float)0.55*WIDTH;
+	  float C = (float)0.7*WIDTH;
+
 
 	  public void display(GLAutoDrawable glDrawable) {
 
-		    depth = (cnt/100)%7;
-		    cnt++;
-		    alpha += dalpha;
-		    beta += dbeta;
-		    gama += dgama;
-	
-		    gl.glClear(GL.GL_COLOR_BUFFER_BIT|
-		               GL.GL_DEPTH_BUFFER_BIT);
-	
-		    // the robot arm is rotating around y axis
-		    myRotatef(0.02f, 0.0f, 1.0f, 0.0f);
-		    drawRobot(O, A, B, C, alpha*dg, beta*dg, gama*dg);
+	    depth = (cnt/100)%7;
+	    cnt++;
+	    alpha += dalpha/40f;
+	    beta += dbeta/40f;
+	    gama += dgama/20f;
+
+	    gl.glClear(GL.GL_COLOR_BUFFER_BIT|
+	               GL.GL_DEPTH_BUFFER_BIT);
+
+	    // the robot arm is rotating around y axis
+	    myRotatef(0.02f, 0.0f, 1.0f, 0.0f);
+	    drawRobot(O, A, B, C, alpha, beta, gama);
 	  }
 
 
@@ -46,10 +48,7 @@ public class JOGL2_8_Robot3d extends JOGL2_7_Sphere {
 	    } else {
 	      myScalef(0.5f, 0.5f, 0.5f);
 	      myTranslatef(0, 0, 1);
-	      
-		    uploadMV(); // get the modelview matrix from the matrix stack
-			// connect the modelview matrix
-	        drawSphere();
+	      drawSphere();
 	    }
 	    myPopMatrix();
 	  }
@@ -59,19 +58,19 @@ public class JOGL2_8_Robot3d extends JOGL2_7_Sphere {
 	                 float alpha, float beta, float gama) {
 	    myPushMatrix();
 
-		    myRotatef(alpha, 0.0f, 0.0f, 1.0f);
-		    // R_z(alpha) is on top of the matrix stack
-		    drawArm(O, A);
-	
-		    myTranslatef(A, 0.0f, 0.0f);
-		    myRotatef(beta, 0.0f, 0.0f, 1.0f);
-		    // R_z(alpha)T_x(A)R_z(beta) is on top of the stack
-		    drawArm(A, B);
-	
-		    myTranslatef(B-A, 0.0f, 0.0f);
-		    myRotatef(gama, 0.0f, 0.0f, 1.0f);
-		    // R_z(alpha)T_x(A)R_z(beta)T_x(B)R_z(gama) is on top
-		    drawArm(B, C);
+	    myRotatef(alpha, 0.0f, 0.0f, 1.0f);
+	    // R_z(alpha) is on top of the matrix stack
+	    drawArm(O, A);
+
+	    myTranslatef(A, 0.0f, 0.0f);
+	    myRotatef(beta, 0.0f, 0.0f, 1.0f);
+	    // R_z(alpha)T_x(A)R_z(beta) is on top of the stack
+	    drawArm(A, B);
+
+	    myTranslatef(B-A, 0.0f, 0.0f);
+	    myRotatef(gama, 0.0f, 0.0f, 1.0f);
+	    // R_z(alpha)T_x(A)R_z(beta)T_x(B)R_z(gama) is on top
+	    drawArm(B, C);
 
 	    myPopMatrix();
 	  }

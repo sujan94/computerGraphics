@@ -26,7 +26,7 @@ public class JOGL3_5_Specular extends JOGL3_4_Diffuse {
 
 	  float L_specular[] = {1, 1, 1, 1}; // Light source property: specular 
 	  float M_specular[] = {1, 1, 1, 1}; // Material property: specular 
-	  float M_shininess = 100; // Material property: shininess 
+	  float M_shininess = 50; // Material property: shininess 
 	  float V_position[] = {0, 0, 10*WIDTH, 1}; // View position
 
 	  

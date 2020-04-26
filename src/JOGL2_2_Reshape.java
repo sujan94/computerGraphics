@@ -62,15 +62,8 @@ public class JOGL2_2_Reshape extends JOGL2_1_Clock2d implements MouseMotionListe
 
   public void display(GLAutoDrawable glDrawable) {
     // the rectangle lowerleft and upperright corners
-	  // homogeneous coordinates
-	   float c[] = {0.0f, 0.0f, 0.0f, 1f};
-	   float h[] = {0.0f, 0.8f, 0.0f, 1f};
-
-	   long curTime;
-	   float hAngle, hsecond, hminute, hhour;
-
-	   float v0[] = {-1f/4f, -1f/4f, 0f};
-	   float v1[] = {1f/4f, 1f/4f, 0f};
+    float v0[] = {-1f/4f, -1f/4f, 0f};
+    float v1[] = {1f/4f, 1f/4f, 0f};
 
  
     gl.glClear(GL.GL_COLOR_BUFFER_BIT);
@@ -95,7 +88,6 @@ public class JOGL2_2_Reshape extends JOGL2_1_Clock2d implements MouseMotionListe
     
     //gl.glColor3f(1, 1, 1); // the rectangle is white
     color[0] = 1f;  color[1] = 1f;   color[2] = 1f; 
-    uploadColor(color); // uniform iColor 
     transDrawClock(v00, v01);
     transDrawClock(v01, v11);
     transDrawClock(v11, v10);
@@ -123,11 +115,10 @@ public class JOGL2_2_Reshape extends JOGL2_1_Clock2d implements MouseMotionListe
 	    hhour = (curTime%12)+7+hminute/60f; // winter + 7; summer + 8
 	    // Eastern Standard Time (daylight saving) 
 
-	    hAngle = (float)Math.PI*hsecond/30f; // arc angle
+	    hAngle = PI*hsecond/30f; // arc angle
 
 	    //gl.glColor3f(1, 0, 0); // second hand in blue
 	    color[0] = 0;  color[1] = 0;   color[2] = 1; 
-	    uploadColor(color); // uniform iColor 
 	    
 	    myLoadIdentity();
 	    myTranslatef(P1[0]/WIDTH, P1[1]/HEIGHT, 0f);
@@ -141,12 +132,11 @@ public class JOGL2_2_Reshape extends JOGL2_1_Clock2d implements MouseMotionListe
 
 	    // gl.glColor3f(0, 1, 0); // minute hand in green
 	    color[0] = 0;  color[1] = 1;   color[2] = 0; 
-	    uploadColor(color); // uniform iColor 
 	    myLoadIdentity();
 	    myTranslatef(P1[0]/WIDTH, P1[1]/HEIGHT, 0f);
 	    myScalef(sx, sy, 1f);
 	    myTranslatef(-v0[0], -v0[1], 0f);
-	    hAngle = (float)Math.PI*hminute/30; // arc angle
+	    hAngle = PI*hminute/30; // arc angle
 	    myTranslatef(c[0], c[1], 0f);
 	    myScalef(0.8f, 0.8f, 1f); // minute hand shorter
 	    myRotatef(-hAngle, 0f, 0f, 1f);
@@ -156,12 +146,11 @@ public class JOGL2_2_Reshape extends JOGL2_1_Clock2d implements MouseMotionListe
 
 	    //gl.glColor3f(0, 0, 1); // hour hand in red
 	    color[0] = 1;  color[1] = 0;   color[2] = 0; 
-	    uploadColor(color); // uniform iColor 
 	    myLoadIdentity();
 	    myTranslatef(P1[0]/WIDTH, P1[1]/HEIGHT, 0f);
 	    myScalef(sx, sy, 1f);
 	    myTranslatef(-v0[0], -v0[1], 0f);
-	    hAngle = (float)Math.PI*hhour/6; // arc angle
+	    hAngle = PI*hhour/6; // arc angle
 	    myTranslatef(c[0], c[1], 0f);
 	    myScalef(0.5f, 0.5f, 1f); // hour hand shortest
 	    myRotatef(-hAngle, 0f, 0f, 1f);
@@ -172,11 +161,26 @@ public class JOGL2_2_Reshape extends JOGL2_1_Clock2d implements MouseMotionListe
 	  }
 
 
-	  public void transDrawClock(float C[], float H[]) {		  
+	  public void transDrawClock(float C[], float H[]) {
+
+		// send color data to vertex shader through uniform (array): color here is not per-vertex
+		FloatBuffer cBuf = Buffers.newDirectFloatBuffer(color);
+	
+		//Connect JOGL variable with shader variable by name
+		int colorLoc = gl.glGetUniformLocation(vfPrograms,  "iColor"); 
+		gl.glProgramUniform3fv(vfPrograms,  colorLoc, 1, cBuf);
+		  
 		 
 		// prepare Modelview matrix to be sent to the vertex shader as uniform
-		uploadMV(); 
-				
+		float MV[] = new float [16];
+		get_Matrix(MV); 
+		
+		
+		// connect the modelview matrix
+		int mvLoc = gl.glGetUniformLocation(vfPrograms,  "mv_matrix"); 
+		gl.glProgramUniformMatrix4fv(vfPrograms, mvLoc,  1,  false,  MV, 0);
+	
+		
 		// stores the two vertices to be sent to the vertex shader 
 		float v[] = new float[6]; 
 	    for (int i=0; i<3; i++) v[i] = C[i]; 

@@ -101,7 +101,7 @@ public class JOGL4_6_Texture extends JOGL4_5_Image {
 	    
 	    // send the current MODELVIEW matrix and the vertices to the vertex shader
 	    // color is generated according to the logical coordinates   
-	    uploadMV(); // get the modelview matrix from the matrix stack
+	    //  todo uploadMV(); // get the modelview matrix from the matrix stack
 		
 		// load vbo[0] with vertex data
 		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]); // use handle 0 		

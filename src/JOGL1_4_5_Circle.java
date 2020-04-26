@@ -23,7 +23,7 @@ import com.jogamp.opengl.*;
 
 public class JOGL1_4_5_Circle extends JOGL1_4_4_aLine {
 	static int depth; // number of subdivisions
-	static int cRadius = 2, flip = 1;
+	static int cRadius = 2, flip = 2;
 	int count=0; // used to generate triangle vertex indices
 
 
@@ -36,7 +36,7 @@ public class JOGL1_4_5_Circle extends JOGL1_4_4_aLine {
 
 		// when the circle is too big or small, change
 		// the direction (growing or shrinking)
-		if (cRadius > (HEIGHT / 2) || cRadius < 2) {
+		if (cRadius >= (HEIGHT / 2) || cRadius <= 1) {
 			flip = -flip;
 			depth++; // number of subdivisions
 			depth = depth % 7;
@@ -84,7 +84,7 @@ public class JOGL1_4_5_Circle extends JOGL1_4_4_aLine {
 	}
 
 	// subdivide a triangle recursively, and draw them
-	void subdivideCircle(float[] vPoints, int radius, float[] v1, float[] v2, int depth) {
+	private void subdivideCircle(float[] vPoints, int radius, float[] v1, float[] v2, int depth) {
 		float v11[] = new float[3];
 		float v22[] = new float[3];
 		float v00[] = { 0, 0, 0 };

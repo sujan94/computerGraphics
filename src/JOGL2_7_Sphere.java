@@ -90,7 +90,6 @@ public class JOGL2_7_Sphere extends JOGL2_6_Cylinder {
 	    int numofTriangle= 8*(int)Math.pow(4,depth); // number of triangles after subdivision
 	    float vPoints[] = new float[3*3*numofTriangle]; // 3 vertices each triangle, and 3 values each vertex
 
-	    uploadMV(); // get the modelview matrix to the shaders
 
 	    count = 0; // start filling triangle array to be sent to vertex shader
 
@@ -107,7 +106,11 @@ public class JOGL2_7_Sphere extends JOGL2_6_Cylinder {
 	    
 	    // send the current MODELVIEW matrix and the vertices to the vertex shader
 	    // color is generated according to the logical coordinates   
-
+	    get_Matrix(MV); // get the modelview matrix from the matrix stack
+		
+		// connect the modelview matrix
+		int mvLoc = gl.glGetUniformLocation(vfPrograms,  "mv_matrix"); 
+		gl.glProgramUniformMatrix4fv(vfPrograms, mvLoc,  1,  false,  MV, 0);  
 
 		// load vbo[0] with vertex data
 		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]); // use handle 0 		

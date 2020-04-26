@@ -16,68 +16,7 @@ import java.nio.FloatBuffer;
 
 
 public class JOGL3_11_Phong extends JOGL3_7_MoveLight {
-	
  
-	  public void drawCone() {
-		    int numofTriangle= 4*(int)Math.pow(2,depth); // number of triangles after subdivision
-		    float vPoints[] = new float[3*3*numofTriangle]; // 3 vertices each triangle, and 3 values each vertex
-		    float vNormals[] = new float[3*3*numofTriangle]; // 3 vertices each triangle, and 3 values each vertex
-
-		    count = 0; // start filling triangle array to be sent to vertex shader
-
-		    subdivideCone(vPoints, vNormals, cVdata[0], cVdata[1], depth);
-		    subdivideCone(vPoints, vNormals, cVdata[1], cVdata[2], depth);
-		    subdivideCone(vPoints, vNormals, cVdata[2], cVdata[3], depth);
-		    subdivideCone(vPoints, vNormals, cVdata[3], cVdata[0], depth);
-		    
-		    // send the current MODELVIEW matrix and the vertices to the vertex shader
-		    // color is generated according to the logical coordinates   
-		    uploadMV(); // get the modelview matrix from the matrix stack
-			
-
-			// load vbo[0] with vertex data
-			gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]); // use handle 0 		
-			FloatBuffer vBuf = Buffers.newDirectFloatBuffer(vPoints);
-			gl.glBufferData(GL_ARRAY_BUFFER, vBuf.limit()*Float.BYTES,  //# of float * size of floats in bytes
-					vBuf, // the vertex array
-					GL_STATIC_DRAW); 
-			gl.glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0); // associate vbo[0] with active VAO buffer
-
-			// load vbo[1] with normal data
-			gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[1]); // use handle 0 		
-			 vBuf = Buffers.newDirectFloatBuffer(vNormals);
-			gl.glBufferData(GL_ARRAY_BUFFER, vBuf.limit()*Float.BYTES,  //# of float * size of floats in bytes
-					vBuf, // the vertex array
-					GL_STATIC_DRAW); 
-			gl.glVertexAttribPointer(1, 3, GL_FLOAT, false, 0, 0); // associate vbo[1] with active VAO buffer
-			gl.glEnable(GL_CULL_FACE);
-			gl.glCullFace(GL_BACK);
-			gl.glDrawArrays(GL_TRIANGLES, 0, vBuf.limit()/3); 
-
-			
-			
-			//reversing the normals and redraw the polygon
-			for (int i=0; i<3*3*numofTriangle; i++)
-				vNormals[i] = -vNormals[i]; // 3 vertices each triangle, and 3 values each vertex
-			
-			// load vbo[1] with normal data
-			gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[1]); // use handle 0 		
-			 vBuf = Buffers.newDirectFloatBuffer(vNormals);
-			gl.glBufferData(GL_ARRAY_BUFFER, vBuf.limit()*Float.BYTES,  //# of float * size of floats in bytes
-					vBuf, // the vertex array
-					GL_STATIC_DRAW); 
-			gl.glVertexAttribPointer(1, 3, GL_FLOAT, false, 0, 0); // associate vbo[1] with active VAO buffer
-					
-			gl.glCullFace(GL_FRONT);
-			gl.glDrawArrays(GL_TRIANGLES, 0, vBuf.limit()/3); 
-			
-			gl.glDisable(GL_CULL_FACE);
-		
-	  
-	  }
-
-	
-	
 	public void init(GLAutoDrawable drawable) {
 			
 			gl = (GL4) drawable.getGL();
