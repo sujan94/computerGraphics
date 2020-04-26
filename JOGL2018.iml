@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="EclipseModuleManager">
+    <libelement value="file://C:/Users/jimxc/Dropbox/JOGL2020/jogamp-all-platforms/jar/gluegen-rt.jar" />
+    <libelement value="file://C:/Users/jimxc/Dropbox/JOGL2020/jogamp-all-platforms/jar/jogl-all.jar" />
+    <src_description expected_position="0">
+      <src_folder value="file://$MODULE_DIR$/src" expected_position="0" />
+    </src_description>
+  </component>
+  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_1_8">
+    <output url="file://$MODULE_DIR$/bin" />
+    <exclude-output />
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
+    </content>
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="jdk" jdkName="1.8" jdkType="JavaSDK" />
+    <orderEntry type="library" name="gluegen-rt" level="project" />
+    <orderEntry type="library" name="jogl-all" level="project" />
+    <orderEntry type="library" name="graphicslib3D" level="project" />
+    <orderEntry type="library" name="jogl-all-natives-macosx-universal" level="project" />
+    <orderEntry type="library" name="gluegen-rt-natives-macosx-universal" level="project" />
+  </component>
+</module>
